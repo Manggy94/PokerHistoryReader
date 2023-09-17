@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class PokerHistoryReader:
+class HistoryReader:
     """
     Reads poker history files from the bucket
     """
