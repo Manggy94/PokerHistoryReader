@@ -50,8 +50,7 @@ class HistoryReader:
             game_type = "Unknown"
         return {"Gametype": game_type}
 
-    @staticmethod
-    def extract_players(hand_txt: str) -> dict:
+    def extract_players(self, hand_txt: str) -> dict:
         """
         Extract player information from a raw poker hand history and return as a dictionary.
 
@@ -70,11 +69,12 @@ class HistoryReader:
         # Populate the players_info dictionary from the matches
         for match in matches:
             seat, pseudo, stack, bounty = match
+            bounty = bounty.replace("€", "").replace("$", "") if bounty else None
             players_info[seat] = {
                 "seat": seat,
                 "pseudo": pseudo,
                 "stack": int(stack),
-                "bounty": float(bounty.replace("€", "").replace("$", "")) if bounty else None
+                "bounty": self.floatify(bounty)
             }
         return players_info
 
@@ -125,7 +125,7 @@ class HistoryReader:
         return {"Buyin": self.floatify(buyin), "ko": self.floatify(ko), "Rake": self.floatify(rake)}
 
     @staticmethod
-    def extract_datetime(hand_txt: dict) -> dict:
+    def extract_datetime(hand_txt: str) -> dict:
         """
         Extract the datetime information.
         """
@@ -234,9 +234,7 @@ class HistoryReader:
         Returns:
             dict: A dictionary representing the card on the Turn.
         """
-        # Regex pattern to capture the Turn
         turn_pattern = r"[\*]{3} TURN [\*]{3} \[\w\w \w\w \w\w\]\[(\w\w)\]"
-        # Find the match using the regex pattern
         turn_match = re.search(turn_pattern, hand_txt, re.UNICODE)
         if turn_match:
             card = turn_match.group(1)
@@ -255,9 +253,7 @@ class HistoryReader:
         Returns:
             dict: A dictionary representing the card on the River.
         """
-        # Regex pattern to capture the River
         river_pattern = r"[\*]{3} RIVER [\*]{3} \[\w\w \w\w \w\w \w\w\]\[(\w\w)\]"
-        # Find the match using the regex pattern
         river_match = re.search(river_pattern, hand_txt, re.UNICODE)
         if river_match:
             card = river_match.group(1)
@@ -297,6 +293,14 @@ class HistoryReader:
         return parsed_actions
 
     def extract_actions(self, hand_txt: str):
+        """
+        Extract the actions information from a poker hand history and return as a nested dictionary.
+        Parameters:
+            hand_txt (str): The raw poker hand text as a string.
+
+        Returns:
+            dict: A dictionary containing all the actions extracted from the poker hand history.
+        """
         actions_dict = {}
         preflop_pattern = r"\*\*\*\sPRE-FLOP\s\*\*\*([\w\s.€-]+)"
         flop_pattern = r"\*\*\*\sFLOP\s\*\*\*\s\[[\w\s]+\]([\w\s.€-]+)"
@@ -305,10 +309,8 @@ class HistoryReader:
         for pattern, street in zip([preflop_pattern, flop_pattern, turn_pattern, river_pattern],
                                    ['PreFlop', 'Flop', 'Turn', 'River']):
             actions_match = re.search(pattern, hand_txt, re.DOTALL)
-            print("\n", street, "\n")
             if actions_match:
                 actions_txt = actions_match.group(1)
-                print(actions_txt)
                 actions_dict[street] = self.parse_actions(actions_txt)
             else:
                 actions_dict[street] = []
@@ -352,4 +354,64 @@ class HistoryReader:
         for winner, amount, pot_type in winners_matches:
             winners_info[winner] = {"amount": self.floatify(amount), "pot_type": pot_type}
         return winners_info
+
+    @staticmethod
+    def extract_hand_id(hand_txt: str) -> dict:
+        """
+        Extract the hand id information from a poker hand history.
+
+        Parameters:
+            hand_txt (str): The raw poker hand text as a string.
+
+        Returns:
+            dict: A dictionary containing the hand id extracted from the poker hand history.
+        """
+        hand_id_match = re.search(r"HandId: #([\d\-]+)", hand_txt)
+        return {"HandId": hand_id_match.group(1)}
+
+    def parse_hand(self, hand_txt: str) -> dict:
+        """
+        Extract all information from a poker hand history and return as a dictionary.
+
+        Parameters:
+            hand_txt (str): The raw poker hand text as a string.
+
+        Returns:
+            dict: A dictionary containing all the information extracted from the poker hand history.
+        """
+        hh_dict = {}
+        hh_dict["HandId"] = self.extract_hand_id(hand_txt)["HandId"]
+        hh_dict["Datetime"] = self.extract_datetime(hand_txt)["Datetime"]
+        hh_dict["GameType"] = self.extract_game_type(hand_txt)["Gametype"]
+        hh_dict["Buyins"] = self.extract_buyin(hand_txt)
+        hh_dict["Blinds"] = self.extract_blinds(hand_txt)
+        hh_dict["Level"] = self.extract_level(hand_txt)["Level"]
+        hh_dict["MaxPlayers"] = self.extract_max_players(hand_txt)["max_players"]
+        hh_dict["ButtonSeat"] = self.extract_button_seat(hand_txt)["Button"]
+        hh_dict["TableName"] = self.extract_table_name(hand_txt)["table_name"]
+        hh_dict["Players"] = self.extract_players(hand_txt)
+        hh_dict["HeroHand"] = self.extract_hero_hand(hand_txt)
+        hh_dict["Postings"] = self.extract_posting(hand_txt)
+        hh_dict["Actions"] = self.extract_actions(hand_txt)
+        hh_dict["Flop"] = self.extract_flop(hand_txt)
+        hh_dict["Turn"] = self.extract_turn(hand_txt)
+        hh_dict["River"] = self.extract_river(hand_txt)
+        hh_dict["Showdown"] = self.extract_showdown(hand_txt)
+        hh_dict["Winners"] = self.extract_winners(hand_txt)
+        return hh_dict
+
+    def parse_history_from_key(self, key: str) -> dict:
+        """
+        Extract all information from a poker hand history and return as a dictionary.
+
+        Parameters:
+            key (str): The key of the poker hand history in the bucket.
+
+        Returns:
+            dict: A dictionary containing all the information extracted from the poker hand history.
+        """
+        history_object = self.bucket.Object(key).get()
+        history_txt = history_object["Body"].read().decode("utf-8")
+        return self.parse_hand(history_txt)
+
 

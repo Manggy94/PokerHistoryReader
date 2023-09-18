@@ -20,7 +20,7 @@ classifiers = [
 
 setup(
     name="pkrhistoryreader",
-    version="0.0.1",
+    version="0.0.2",
     description="A Poker Package to read poker history files from S3 bucket",
     long_description=Path("README.md").read_text(),
     long_description_content_type='text/markdown',

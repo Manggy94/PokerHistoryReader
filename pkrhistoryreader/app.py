@@ -1,8 +1,10 @@
 from pkrhistoryreader.reader import HistoryReader
+from datetime import datetime
+import random
+import threading
 
 pkrreader = HistoryReader()
-keys = [o.key for o in pkrreader.bucket.objects.filter(Prefix="data/histories/split/2016/03")]
-key = keys[155]
-hand_obj = pkrreader.bucket.Object(key).get()
-hand_txt = hand_obj['Body'].read().decode('utf-8')
-result = pkrreader.extract_winners(hand_txt)
+keys = [o.key for o in pkrreader.bucket.objects.filter(Prefix="data/histories/split/2023/08")]
+key = keys[100]
+result = pkrreader.parse_history_from_key(key)
+print(result)
