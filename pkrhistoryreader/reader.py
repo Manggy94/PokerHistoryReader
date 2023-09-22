@@ -14,10 +14,10 @@ class HistoryReader:
     def __init__(self):
         self.s3 = boto3.resource(
             's3',
-            region_name=os.environ.get("DO_REGION"),
-            endpoint_url=os.environ.get("DO_ENDPOINT"),
-            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
+            region_name=os.environ.get("DO_REGION").strip(),
+            endpoint_url=os.environ.get("DO_ENDPOINT").strip(),
+            aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID").strip(),
+            aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY").strip()
         )
         self.bucket = self.s3.Bucket("manggy-poker")
 
@@ -63,7 +63,7 @@ class HistoryReader:
         # Initialize an empty dictionary to store the player information
         players_info = {}
         # Regex pattern to capture seat number, pseudo, stack, and optional bounty
-        pattern = r"Seat (\d+): ([\w\s.\-&]+) \((\d+)(?:, ([\d\.]+[€$]))?"
+        pattern = r"Seat (\d+): ([\w\s.\-&]{3,12}) \((\d+)(?:, ([\d\.]+[€$]))?"
         # Find all matching player information using the regex pattern
         matches = re.findall(pattern, hand_txt)
         # Populate the players_info dictionary from the matches
@@ -78,7 +78,7 @@ class HistoryReader:
             }
         return players_info
 
-    def extract_posting(self, hand_txt: str) -> dict:
+    def extract_posting(self, hand_txt: str) -> list:
         """
         Extract blinds and antes posted information from a  poker hand history and return as a dictionary.
 
@@ -86,10 +86,10 @@ class HistoryReader:
             hand_txt (str): The raw poker hand history as a string.
 
         Returns:
-            dict: A dictionary containing blinds and antes information.
+            list: A dictionary containing blinds and antes information.
         """
         # Initialize an empty dictionary to store blinds and antes information
-        blinds_antes_info = {}
+        blinds_antes_info = []
         # Regex pattern to capture blinds and antes posted by players
         blinds_pattern = r"(\n[\w\s\-&.]{3,12})\s+posts\s+(small blind|big blind|ante)\s+([\d.,]+)"
         # Find all matching blinds and antes information using the regex pattern
@@ -97,9 +97,7 @@ class HistoryReader:
         # Populate the blinds_antes_info dictionary from the matches
         for match in matches:
             pseudo, blind_type, amount = match
-            if blind_type not in blinds_antes_info:
-                blinds_antes_info[blind_type] = []
-            blinds_antes_info[blind_type].append({
+            blinds_antes_info.append({
                 "pseudo": pseudo.strip(),
                 "amount": self.floatify(amount),
                 "blind_type": blind_type
@@ -195,12 +193,11 @@ class HistoryReader:
             str: A string representing the hero's hand (hole cards).
         """
         # Regex pattern to capture hero's hand
-        hero_hand_pattern = r"Dealt to ([\w\s\(\)\#\-\[\]\.]+) \[(\w\w) (\w\w)\]"
+        hero_hand_pattern = r"Dealt to ([\w\s.\-&]{3,12}) \[(\w\w) (\w\w)\]"
         # Find the match using the regex pattern
         hero_hand_match = re.search(hero_hand_pattern, hand_txt, re.UNICODE)
         hero, card1, card2 = hero_hand_match.groups()
         return {"Hero": hero, "Card1": card1, "Card2": card2}
-
 
     @staticmethod
     def extract_flop(hand_txt: str) -> dict:
@@ -328,12 +325,11 @@ class HistoryReader:
             showdown_info: A dict of dictionaries, each containing the player's shown cards.
         """
         showdown_info = {}
-        showdown_pattern = r"(\w+)\s+shows\s+\[(\w\w) (\w\w)\]"
+        showdown_pattern = r"([\w\s.\-&]+)\s+shows\s+\[(\w\w) (\w\w)\]"
         showdown_matches = re.findall(showdown_pattern, hand_txt)
         for player, card1, card2 in showdown_matches:
             showdown_info[player] = {"Card1": card1, "Card2": card2}
         return showdown_info
-
 
     def extract_winners(self, hand_txt: str) -> dict:
         """
@@ -343,12 +339,12 @@ class HistoryReader:
             hand_txt (str): The raw poker hand text as a string.
 
         Returns:
-            dict: A nested dictionary with player names as keys, each containing a dictionary with the amount and pot type.
+            dict: A nested dictionary with pl_names as keys, each containing a dictionary with the amount and pot type.
         """
         # Dictionary to hold the winners information
         winners_info = {}
         # Regex pattern to capture the winners
-        winners_pattern = r"(\w+) collected (\d+) from (pot|main pot|side pot \d+)"
+        winners_pattern = r"\n([\w\s.\-&]{3,12}) collected (\d+) from (pot|main pot|side pot \d+)"
         # Find all the matches using the regex pattern
         winners_matches = re.findall(winners_pattern, hand_txt)
         for winner, amount, pot_type in winners_matches:
@@ -379,25 +375,24 @@ class HistoryReader:
         Returns:
             dict: A dictionary containing all the information extracted from the poker hand history.
         """
-        hh_dict = {}
-        hh_dict["HandId"] = self.extract_hand_id(hand_txt)["HandId"]
-        hh_dict["Datetime"] = self.extract_datetime(hand_txt)["Datetime"]
-        hh_dict["GameType"] = self.extract_game_type(hand_txt)["Gametype"]
-        hh_dict["Buyins"] = self.extract_buyin(hand_txt)
-        hh_dict["Blinds"] = self.extract_blinds(hand_txt)
-        hh_dict["Level"] = self.extract_level(hand_txt)["Level"]
-        hh_dict["MaxPlayers"] = self.extract_max_players(hand_txt)["max_players"]
-        hh_dict["ButtonSeat"] = self.extract_button_seat(hand_txt)["Button"]
-        hh_dict["TableName"] = self.extract_table_name(hand_txt)["table_name"]
-        hh_dict["Players"] = self.extract_players(hand_txt)
-        hh_dict["HeroHand"] = self.extract_hero_hand(hand_txt)
-        hh_dict["Postings"] = self.extract_posting(hand_txt)
-        hh_dict["Actions"] = self.extract_actions(hand_txt)
-        hh_dict["Flop"] = self.extract_flop(hand_txt)
-        hh_dict["Turn"] = self.extract_turn(hand_txt)
-        hh_dict["River"] = self.extract_river(hand_txt)
-        hh_dict["Showdown"] = self.extract_showdown(hand_txt)
-        hh_dict["Winners"] = self.extract_winners(hand_txt)
+        hh_dict = {"HandId": self.extract_hand_id(hand_txt)["HandId"],
+                   "Datetime": self.extract_datetime(hand_txt)["Datetime"],
+                   "GameType": self.extract_game_type(hand_txt)["Gametype"],
+                   "Buyins": self.extract_buyin(hand_txt),
+                   "Blinds": self.extract_blinds(hand_txt),
+                   "Level": self.extract_level(hand_txt)["Level"],
+                   "MaxPlayers": self.extract_max_players(hand_txt)["max_players"],
+                   "ButtonSeat": self.extract_button_seat(hand_txt)["Button"],
+                   "TableName": self.extract_table_name(hand_txt)["table_name"],
+                   "Players": self.extract_players(hand_txt),
+                   "HeroHand": self.extract_hero_hand(hand_txt),
+                   "Postings": self.extract_posting(hand_txt),
+                   "Actions": self.extract_actions(hand_txt),
+                   "Flop": self.extract_flop(hand_txt),
+                   "Turn": self.extract_turn(hand_txt),
+                   "River": self.extract_river(hand_txt),
+                   "Showdown": self.extract_showdown(hand_txt),
+                   "Winners": self.extract_winners(hand_txt)}
         return hh_dict
 
     def parse_history_from_key(self, key: str) -> dict:
@@ -413,5 +408,3 @@ class HistoryReader:
         history_object = self.bucket.Object(key).get()
         history_txt = history_object["Body"].read().decode("utf-8")
         return self.parse_hand(history_txt)
-
-

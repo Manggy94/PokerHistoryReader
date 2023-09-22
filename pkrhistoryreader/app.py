@@ -5,6 +5,6 @@ import threading
 
 pkrreader = HistoryReader()
 keys = [o.key for o in pkrreader.bucket.objects.filter(Prefix="data/histories/split/2023/08")]
-key = keys[100]
+key = keys[1000]
 result = pkrreader.parse_history_from_key(key)
-print(result)
+print(result.get("Winners"))
