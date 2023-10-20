@@ -10,9 +10,16 @@ class ReaderTestCase(unittest.TestCase):
         self.reader = reader.HistoryReader()
         self.key1 = "data/histories/split/2023/08/08/677652300/2910494466559180809-74-1691516183.txt"
         self.histo1 = self.reader.bucket.Object(self.key1).get()['Body'].read().decode('utf-8')
+        self.hand_id_dict = self.reader.parse_history_from_key(self.key1)
 
     def test_new_reader(self):
         self.assertIsInstance(self.reader, reader.HistoryReader)
+
+    def test_parse_history_from_key(self):
+        histo_dict = self.reader.parse_history_from_key(self.key1)
+        self.assertIsInstance(histo_dict, dict)
+        self.assertEqual("2910494466559180809-74-1691516183", histo_dict["HandId"])
+        self.assertEqual(histo_dict, self.hand_id_dict)
 
     def test_extract_hand_id(self):
         hand_id_dict = (self.reader.extract_hand_id(self.histo1))
