@@ -70,10 +70,10 @@ class HistoryReader:
         for match in matches:
             seat, pseudo, stack, bounty = match
             bounty = bounty.replace("€", "").replace("$", "") if bounty else None
-            players_info[seat] = {
-                "seat": seat,
+            players_info[int(seat)] = {
+                "seat": int(seat),
                 "pseudo": pseudo,
-                "stack": int(stack),
+                "stack": self.floatify(stack),
                 "bounty": self.floatify(bounty)
             }
         return players_info
@@ -211,7 +211,7 @@ class HistoryReader:
             str: A string representing the cards on the Flop.
         """
         # Regex pattern to capture the Flop
-        flop_pattern = r"[\*]{3} FLOP [\*]{3} \[(\w\w) (\w\w) (\w\w)\]"
+        flop_pattern = r"\*\*\* FLOP \*\*\* \[(\w\w) (\w\w) (\w\w)\]"
         # Find the match using the regex pattern
         flop_match = re.search(flop_pattern, hand_txt, re.UNICODE)
         if flop_match:
@@ -231,7 +231,7 @@ class HistoryReader:
         Returns:
             dict: A dictionary representing the card on the Turn.
         """
-        turn_pattern = r"[\*]{3} TURN [\*]{3} \[\w\w \w\w \w\w\]\[(\w\w)\]"
+        turn_pattern = r"\*\*\* TURN \*\*\* \[\w\w \w\w \w\w\]\[(\w\w)\]"
         turn_match = re.search(turn_pattern, hand_txt, re.UNICODE)
         if turn_match:
             card = turn_match.group(1)
@@ -250,7 +250,7 @@ class HistoryReader:
         Returns:
             dict: A dictionary representing the card on the River.
         """
-        river_pattern = r"[\*]{3} RIVER [\*]{3} \[\w\w \w\w \w\w \w\w\]\[(\w\w)\]"
+        river_pattern = r"\*\*\* RIVER \*\*\* \[\w\w \w\w \w\w \w\w\]\[(\w\w)\]"
         river_match = re.search(river_pattern, hand_txt, re.UNICODE)
         if river_match:
             card = river_match.group(1)
@@ -328,7 +328,7 @@ class HistoryReader:
         showdown_pattern = r"([\w\s.\-&]+)\s+shows\s+\[(\w\w) (\w\w)\]"
         showdown_matches = re.findall(showdown_pattern, hand_txt)
         for player, card1, card2 in showdown_matches:
-            showdown_info[player] = {"Card1": card1, "Card2": card2}
+            showdown_info[player.strip()] = {"Card1": card1, "Card2": card2}
         return showdown_info
 
     def extract_winners(self, hand_txt: str) -> dict:

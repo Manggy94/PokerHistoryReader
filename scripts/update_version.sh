@@ -54,7 +54,8 @@ echo "{\"major\":$MAJOR,\"minor\":$MINOR,\"patch\":$PATCH}" > "$VERSION_FILE"
 # Afficher la nouvelle version
 echo "Nouvelle version : $MAJOR.$MINOR.$PATCH"
 
-git add -Afficher
+# Ajouter les fichier de version modifié à l'index git
+git add -A
 
 read -p "Entrez le message de tag : " COMMIT_MESSAGE
 
