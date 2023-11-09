@@ -182,6 +182,14 @@ class HistoryReader:
         return {"table_name": table_match.group(1)}
 
     @staticmethod
+    def extract_table_ident(hand_txt: str) -> dict:
+        """
+        Extract the table ident information.
+        """
+        table_match = re.search(r"(\(\d+\)#\d+)", hand_txt)
+        return {"table_ident": table_match.group(1)}
+
+    @staticmethod
     def extract_hero_hand(hand_txt: str) -> dict:
         """
         Extract the hero's hand (hole cards) from a single poker hand text and return as a string.
@@ -384,6 +392,7 @@ class HistoryReader:
                    "MaxPlayers": self.extract_max_players(hand_txt)["max_players"],
                    "ButtonSeat": self.extract_button_seat(hand_txt)["Button"],
                    "TableName": self.extract_table_name(hand_txt)["table_name"],
+                   "TableIdent": self.extract_table_ident(hand_txt)["table_ident"],
                    "Players": self.extract_players(hand_txt),
                    "HeroHand": self.extract_hero_hand(hand_txt),
                    "Postings": self.extract_posting(hand_txt),

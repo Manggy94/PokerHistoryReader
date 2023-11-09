@@ -176,6 +176,26 @@ class ReaderTestCase(unittest.TestCase):
         self.assertIsInstance(button_seat_dict["Button"], int)
         self.assertEqual(3, button_seat_dict["Button"])
 
+    def test_extract_table_name(self):
+        """
+        Test the extraction of the table name from a hand history
+        """
+        table_name_dict = (self.reader.extract_table_name(self.histo1))
+        self.assertIsInstance(table_name_dict, dict)
+        self.assertEqual(set(table_name_dict.keys()), {"table_name"})
+        self.assertIsInstance(table_name_dict["table_name"], str)
+        self.assertEqual('TNT(677652300)#008', table_name_dict["table_name"])
+
+    def test_extract_table_ident(self):
+        """
+        Test the extraction of the table ident from a hand history
+        """
+        table_ident_dict = (self.reader.extract_table_ident(self.histo1))
+        self.assertIsInstance(table_ident_dict, dict)
+        self.assertEqual(set(table_ident_dict.keys()), {"table_ident"})
+        self.assertIsInstance(table_ident_dict["table_ident"], str)
+        self.assertEqual('(677652300)#008', table_ident_dict["table_ident"])
+
     def test_extract_hero_hand(self):
         """
         Test the extraction of the hero hand from a hand history
@@ -287,4 +307,4 @@ class ReaderTestCase(unittest.TestCase):
         self.assertIsInstance(parsed_hand_dict, dict)
         self.assertEqual(set(parsed_hand_dict.keys()), {
             "HandId", "Datetime", "GameType", "Buyins", "Blinds", "Level", "MaxPlayers", "ButtonSeat", "TableName",
-            "Players", "HeroHand", "Postings", "Actions", "Flop", "Turn", "River", "Showdown", "Winners"})
+            "Players", "HeroHand", "Postings", "Actions", "Flop", "Turn", "River", "Showdown", "Winners", "TableIdent"})
